@@ -159,10 +159,15 @@ static BOOL aspect_remove(AspectIdentifier *aspect, NSError **error) {
 }
 
 static void aspect_performLocked(dispatch_block_t block) {
-    static OSSpinLock aspect_lock = OS_SPINLOCK_INIT;
-    OSSpinLockLock(&aspect_lock);
+    
+    static dispatch_semaphore_t aspect_lock;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        aspect_lock = dispatch_semaphore_create(1);
+    });
+    dispatch_semaphore_wait(aspect_lock, DISPATCH_TIME_FOREVER);
     block();
-    OSSpinLockUnlock(&aspect_lock);
+    dispatch_semaphore_signal(aspect_lock);
 }
 
 static SEL aspect_aliasForSelector(SEL selector) {
